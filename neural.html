@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Exam Evaluator</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: linear-gradient(-45deg, #ff6ec4, #7873f5, #4ade80, #06b6d4);
+      background-size: 400% 400%;
+      animation: gradientShift 10s ease infinite;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    @keyframes gradientShift {
+      0% {background-position: 0% 50%;}
+      50% {background-position: 100% 50%;}
+      100% {background-position: 0% 50%;}
+    }
+
+    @keyframes fadeIn {
+      from {opacity: 0; transform: translateY(-20px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+
+    .container, .welcome-page {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 30px;
+      border-radius: 20px;
+      max-width: 900px;
+      width: 95%;
+      margin: auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      animation: fadeIn 1s ease;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .logo {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 20px;
+      display: block;
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% {transform: translateY(0);}
+      50% {transform: translateY(-15px);}
+    }
+
+    .welcome-title {
+      text-align: center;
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .start-btn {
+      display: block;
+      margin: 0 auto;
+      padding: 15px 40px;
+      font-size: 18px;
+      border: none;
+      border-radius: 30px;
+      background: linear-gradient(to right, #6366f1, #ec4899);
+      color: white;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .start-btn:hover {
+      transform: scale(1.05);
+    }
+
+    h2, h3, h4 {
+      text-align: center;
+      color: #222;
+    }
+
+    .section {
+      margin-bottom: 25px;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+    }
+
+    input[type="text"], input[type="password"], input[type="file"], input[type="email"] {
+      width: 100%;
+      padding: 12px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      transition: border 0.3s ease;
+    }
+
+    input:focus {
+      border: 1px solid #6366f1;
+      outline: none;
+    }
+
+    button {
+      padding: 12px 24px;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #4338ca;
+    }
+
+    .link {
+      color: #6366f1;
+      cursor: pointer;
+      text-decoration: underline;
+      display: inline-block;
+      margin-top: 10px;
+    }
+
+    .error {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f0f0f0;
+    }
+
+    .mark {
+      color: green;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Welcome Page -->
+<div class="welcome-page" id="welcomePage">
+  <img src="https://cdn-icons-png.flaticon.com/512/3037/3037496.png" alt="Logo" class="logo">
+  <div class="welcome-title">AI Exam Evaluator</div>
+  <button class="start-btn" onclick="goToLogin()">Start</button>
+</div>
+
+<!-- Main App Container -->
+<div class="container hidden" id="mainApp">
+
+  <!-- Login Section -->
+  <div id="loginSection" class="section">
+    <h2>Login</h2>
+    <input type="text" id="username" placeholder="Username" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+    <div id="loginError" class="error"></div>
+    <div class="link" onclick="showSignup()">Don't have an account? Sign up</div><br>
+    <div class="link" onclick="showForgotPassword()">Forgot Password?</div>
+  </div>
+
+  <!-- Sign Up Section -->
+  <div id="signupSection" class="section hidden">
+    <h2>Sign Up</h2>
+    <input type="text" id="name" placeholder="Full Name" />
+    <input type="text" id="signupUsername" placeholder="Choose Username" />
+    <input type="password" id="signupPassword" placeholder="Choose Password" />
+    <input type="email" id="signupEmail" placeholder="Email Address" />
+    <button onclick="submitSignup()">Submit</button>
+    <div id="signupError" class="error"></div>
+    <div class="link" onclick="backToLogin()">Back to Login</div>
+  </div>
+
+  <!-- Forgot Password Section -->
+  <div id="forgotPasswordSection" class="section hidden">
+    <h2>Forgot Password</h2>
+    <input type="email" id="forgotEmail" placeholder="Enter your email" />
+    <button onclick="sendRecoveryLink()">Send Recovery Link</button>
+    <div class="link" onclick="backToLogin()">Back to Login</div>
+  </div>
+
+  <!-- Evaluation Section -->
+  <div id="evaluationSection" class="section hidden">
+    <h2>Exam Evaluation</h2>
+    <label for="regNumber">Student Registration Number:</label>
+    <input type="text" id="regNumber" placeholder="Enter registration number" />
+    <label for="subjectName">Subject Name:</label>
+    <input type="text" id="subjectName" placeholder="Enter subject name" />
+    <label for="answerKey">Upload Answer Key (image or PDF):</label>
+    <input type="file" id="answerKey" multiple accept="image/*,.pdf" />
+    <label for="handwrittenAnswers">Upload Handwritten Answers (image or PDF):</label>
+    <input type="file" id="handwrittenAnswers" multiple accept="image/*,.pdf" />
+    <button onclick="evaluateExam()">Evaluate</button>
+    <hr />
+    <h3>Already Evaluated?</h3>
+    <label for="checkRegNumber">Registration Number:</label>
+    <input type="text" id="checkRegNumber" placeholder="Search marks" />
+    <button onclick="checkPreviousResult()">Check</button>
+    <div id="results"></div>
+  </div>
+
+  <!-- Results Page -->
+  <div id="resultsPage" class="section hidden">
+    <h2>Evaluation Results</h2>
+    <table id="resultsTable">
+      <thead>
+        <tr><th>Registration Number</th><th>Subject</th><th>Total Marks</th></tr>
+      </thead>
+      <tbody id="resultsTableBody"></tbody>
+    </table>
+    <br />
+    <button onclick="finishEvaluation()">Finish</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<script>
+  const users = {};
+  const storedResults = {};
+
+  function goToLogin() {
+    document.getElementById('welcomePage').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+  }
+
+  function login() {
+    const user = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value.trim();
+    const error = document.getElementById('loginError');
+    if (!user || !pass) return error.textContent = "Enter username & password.";
+    if (!(user in users)) return error.textContent = "Invalid username.";
+    if (users[user].password !== pass) return error.textContent = "Invalid password.";
+    error.textContent = "";
+    document.getElementById('loginSection').classList.add('hidden');
+    document.getElementById('evaluationSection').classList.remove('hidden');
+  }
+
+  function showSignup() {
+    document.getElementById('loginSection').classList.add('hidden');
+    document.getElementById('signupSection').classList.remove('hidden');
+  }
+
+  function backToLogin() {
+    document.getElementById('signupSection').classList.add('hidden');
+    document.getElementById('forgotPasswordSection').classList.add('hidden');
+    document.getElementById('loginSection').classList.remove('hidden');
+  }
+
+  function showForgotPassword() {
+    document.getElementById('loginSection').classList.add('hidden');
+    document.getElementById('forgotPasswordSection').classList.remove('hidden');
+  }
+
+  function submitSignup() {
+    const name = document.getElementById('name').value.trim();
+    const username = document.getElementById('signupUsername').value.trim();
+    const password = document.getElementById('signupPassword').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const error = document.getElementById('signupError');
+    if (!name || !username || !password || !email) return error.textContent = "Please fill all fields.";
+    if (users[username]) return error.textContent = "Username exists.";
+    users[username] = { password, email };
+    alert("Signup successful! Please login.");
+    backToLogin();
+  }
+
+  function sendRecoveryLink() {
+    const email = document.getElementById('forgotEmail').value.trim();
+    const found = Object.entries(users).find(([_, u]) => u.email === email);
+    if (!found) return alert("No account with this email.");
+    alert("Recovery email sent. Your username is: " + found[0]);
+    backToLogin();
+  }
+
+  async function evaluateExam() {
+    const regNumber = document.getElementById('regNumber').value.trim();
+    const subject = document.getElementById('subjectName').value.trim();
+    const results = document.getElementById('results');
+    if (!regNumber || !subject) return alert("Fill all fields.");
+    if (!/^[a-zA-Z0-9]+$/.test(regNumber)) return alert("Invalid Reg. Number.");
+    const keyFiles = document.getElementById('answerKey').files;
+    const answerFiles = document.getElementById('handwrittenAnswers').files;
+    if (!keyFiles.length || !answerFiles.length) return alert("Upload both files.");
+    results.innerHTML = "Processing...";
+    const keyText = await extractTextFromFiles(keyFiles);
+    const studentText = await extractTextFromFiles(answerFiles);
+    let total = 0;
+    keyText.forEach((q, i) => {
+      const a = studentText[i] || "";
+      total += getMark(q, a);
+    });
+    results.innerHTML = `<h3>Result for ${regNumber}</h3>
+      <p><strong>Subject:</strong> ${subject}</p>
+      <p><strong>Total Marks:</strong> ${total}</p>`;
+    if (!storedResults[regNumber]) storedResults[regNumber] = {};
+    storedResults[regNumber][subject] = { total, evaluatedAt: new Date().toLocaleString() };
+    document.getElementById('evaluationSection').classList.add('hidden');
+    document.getElementById('resultsPage').classList.remove('hidden');
+    displayResultsInTable();
+  }
+
+  function checkPreviousResult() {
+    const regNumber = document.getElementById('checkRegNumber').value.trim();
+    const results = document.getElementById('results');
+    const data = storedResults[regNumber];
+    if (!regNumber || !/^[a-zA-Z0-9]+$/.test(regNumber)) return alert("Invalid Reg. No.");
+    if (!data) return results.innerHTML = `<p>No result found for <strong>${regNumber}</strong>.</p>`;
+    document.getElementById('evaluationSection').classList.add('hidden');
+    document.getElementById('resultsPage').classList.remove('hidden');
+    displayResultsInTable();
+  }
+
+  function displayResultsInTable() {
+    const body = document.getElementById('resultsTableBody');
+    body.innerHTML = '';
+    for (const reg in storedResults) {
+      for (const subj in storedResults[reg]) {
+        const data = storedResults[reg][subj];
+        body.innerHTML += `<tr><td>${reg}</td><td>${subj}</td><td class="mark">${data.total}</td></tr>`;
+      }
+    }
+  }
+
+  function finishEvaluation() {
+    document.getElementById('regNumber').value = '';
+    document.getElementById('subjectName').value = '';
+    document.getElementById('answerKey').value = '';
+    document.getElementById('handwrittenAnswers').value = '';
+    document.getElementById('resultsPage').classList.add('hidden');
+    document.getElementById('evaluationSection').classList.remove('hidden');
+  }
+
+  function logout() {
+    document.getElementById('resultsPage').classList.add('hidden');
+    document.getElementById('loginSection').classList.remove('hidden');
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+    document.getElementById('checkRegNumber').value = '';
+    document.getElementById('regNumber').value = '';
+    document.getElementById('subjectName').value = '';
+    document.getElementById('answerKey').value = '';
+    document.getElementById('handwrittenAnswers').value = '';
+  }
+
+  function getMark(keyAnswer, studentAnswer) {
+    const keyWords = keyAnswer.toLowerCase().split(/\s+/);
+    const studentWords = studentAnswer.toLowerCase().split(/\s+/);
+    return keyWords.filter(word => studentWords.includes(word)).length;
+  }
+
+  function extractText(file) {
+    return new Promise((resolve, reject) => {
+      if (file.type === 'application/pdf') resolve(""); // Placeholder
+      else {
+        Tesseract.recognize(file, 'eng', { logger: m => console.log(m) })
+          .then(({ data: { text } }) => resolve(text))
+          .catch(reject);
+      }
+    });
+  }
+
+  async function extractTextFromFiles(files) {
+    return Promise.all(Array.from(files).map(file => extractText(file)));
+  }
+</script>
+</body>
+</html>
